@@ -1,0 +1,319 @@
+﻿
+
+@model System.Data.DataTable
+
+@{
+    ViewBag.Title = "ChatBot";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var sessions = ViewBag.Sessions as System.Data.DataTable;
+    string activeSession = ViewBag.ActiveSession;
+}
+
+<style>
+    .chat-container {
+        display: flex;
+        height: 80vh;
+    }
+
+    /* LEFT PANEL */
+    .sessions {
+        width: 25%;
+        border-right: 1px solid #ddd;
+        overflow-y: auto;
+        background: #f8f9fa;
+    }
+
+    .session-item {
+        padding: 10px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+    }
+
+        .session-item.active {
+            background: #e8f8f5;
+            font-weight: bold;
+        }
+
+    /* RIGHT CHAT */
+    .chat-area {
+        width: 75%;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        background: #fafafa;
+        margin-bottom: 10px;
+    }
+
+    .bubble {
+        max-width: 70%;
+        padding: 10px;
+        margin: 6px 0;
+        border-radius: 10px;
+        clear: both;
+    }
+
+    .user {
+        background: #d1e7dd;
+        float: right;
+        text-align: right;
+    }
+
+    .bot {
+        background: #ffffff;
+        float: left;
+    }
+
+    .time {
+        font-size: 11px;
+        color: #777;
+    }
+
+    .badge {
+        font-size: 11px;
+        background: #0d6efd;
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 6px;
+        margin-left: 5px;
+    }
+    button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    textarea:disabled {
+        background: #eee;
+    }
+
+</style>
+
+@if (Session["USER_ID"] != null)
+{
+    <div style="background:#f1f1f1;padding:8px;border-radius:4px;margin-bottom:10px;font-size:13px;">
+        Logged in as <b>@Session["USERNAME"]</b> (<span>@Session["ROLE"]</span>)
+    </div>
+}
+
+<div class="chat-container">
+
+    <!-- LEFT: SESSION HISTORY -->
+    <div class="sessions">
+        @foreach (System.Data.DataRow s in sessions.Rows)
+        {
+            string sid = s["SessionId"].ToString();
+            <div class="session-item @(sid == activeSession ? "active" : "")"
+                 onclick="location.href='/Chat/Index?sessionId=@sid'">
+                🗨 @Convert.ToDateTime(s["LoginTime"]).ToString("dd MMM yyyy, hh:mm tt")
+            </div>
+        }
+    </div>
+
+    <!-- RIGHT: CHAT -->
+    <div class="chat-area">
+
+        <!-- CHAT HISTORY -->
+        <div id="chatHistory" class="chat-box">
+            @{
+                DateTime? lastDate = null;
+            }
+
+            @foreach (System.Data.DataRow r in Model.Rows)
+            {
+                DateTime d = Convert.ToDateTime(r["CreatedOn"]).Date;
+
+                if (lastDate == null || d != lastDate)
+                {
+                    <div style="text-align:center;color:gray;margin:10px 0;">
+                        @d.ToString("dd MMM yyyy")
+                    </div>
+                    lastDate = d;
+                }
+
+                if (r["Sender"].ToString() == "User")
+                {
+                    <div class="bubble user">
+                        @r["Message"]
+                        <div class="time">@Convert.ToDateTime(r["CreatedOn"]).ToString("hh:mm tt")</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="bubble bot">
+                        @r["Message"]
+                        @if (r["Confidence"] != DBNull.Value)
+                        {
+                            <span class="badge">
+                                @(Convert.ToDouble(r["Confidence"]) * 100)%
+                            </span>
+                        }
+                        <div class="time">@Convert.ToDateTime(r["CreatedOn"]).ToString("hh:mm tt")</div>
+                    </div>
+                }
+            }
+        </div>
+
+        <!-- INPUT -->
+        <textarea id="txt"
+                  maxlength="250"
+                  style="width:100%;height:60px;border-radius:5px;"
+                  placeholder="Ask your question..."
+                  oninput="updateCharCount(); updateWordCount();"
+                  onpaste="handlePaste(event)"></textarea>
+
+        <div style="font-size:12px;color:red;">
+            Remaining chars: <span id="charCount">250</span> |
+            Remaining words: <span id="wordCount">50</span>
+        </div>
+
+        <div style="margin-top:5px;">
+            <button onclick="send()">Send</button>
+            <button onclick="clearQuestion()">Clear</button>
+            <button onclick="clearChat()">🗑 Clear Chat</button>
+        </div>
+
+        <!-- LEARNING -->
+        <div id="learnBox" style="display:none;margin-top:10px;">
+            Do you know the answer?
+            <button onclick="yes()">Yes</button>
+            <button onclick="no()">No</button>
+        </div>
+
+        <div id="answerBox" style="display:none;margin-top:10px;">
+            <textarea id="userAnswer" style="width:100%;height:60px;"></textarea>
+            <button onclick="submitAnswer()">Submit</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    let lastQuestion = "";
+    const MAX_CHARS = 250;
+    const MAX_WORDS = 50;
+
+    function now() {
+        return new Date().toLocaleTimeString();
+    }
+
+    function addBubble(sender, text, confidence) {
+        let cls = sender === "You" ? "user" : "bot";
+        let badge = confidence !== undefined
+            ? `<span class="badge">${(confidence * 100).toFixed(0)}%</span>` : "";
+
+        $('#chatHistory').append(`
+            <div class="bubble ${cls}">
+                ${text} ${badge}
+                <div class="time">${now()}</div>
+            </div>
+        `);
+
+        $('#chatHistory').scrollTop($('#chatHistory')[0].scrollHeight);
+    }
+
+    function send() {
+        lastQuestion = $('#txt').val();
+        if (!lastQuestion.trim()) return;
+
+        addBubble("You", lastQuestion);
+
+        $.post('/Chat/Ask', { message: lastQuestion }, function (r) {
+            addBubble("Bot", r.Text, r.Confidence);
+            if (r.NeedsLearning) $('#learnBox').show();
+            // 🔒 LOCK CHAT INPUT
+            //disableChatInput();
+        });
+
+        clearQuestion();
+        // 🔓 ENABLE CHAT AGAIN
+        enableChatInput();
+    }
+
+    function clearQuestion() {
+        $('#txt').val('');
+        $('#charCount').text(MAX_CHARS);
+        $('#wordCount').text(MAX_WORDS);
+    }
+
+    function yes() {
+        $('#learnBox').hide();
+        $('#userAnswer').val('');
+        $('#answerBox').show();
+    }
+
+    function no() {
+        $('#learnBox').hide();
+        addBubble("Bot", "Okay, ask another question.");
+        // 🔓 ENABLE CHAT AGAIN
+        enableChatInput();
+    }
+
+    function submitAnswer() {
+        let ans = $('#userAnswer').val();
+        if (!ans.trim()) return;
+
+        $.post('/Chat/SubmitLearning', {
+            question: lastQuestion,
+            answer: ans
+        }, function (r) {
+            addBubble("Bot", r);
+            $('#answerBox').hide();
+            // 🔓 ENABLE CHAT AGAIN
+            enableChatInput();
+        });
+    }
+
+    function updateCharCount() {
+        $('#charCount').text(MAX_CHARS - $('#txt').val().length);
+    }
+
+    function getWords(t) {
+        return t.trim().split(/\s+/).filter(w => w);
+    }
+
+    function updateWordCount() {
+        let words = getWords($('#txt').val());
+        if (words.length > MAX_WORDS) {
+            $('#txt').val(words.slice(0, MAX_WORDS).join(' '));
+            words = words.slice(0, MAX_WORDS);
+        }
+        $('#wordCount').text(MAX_WORDS - words.length);
+    }
+
+    function handlePaste(e) {
+        e.preventDefault();
+        let pasted = (e.clipboardData || window.clipboardData).getData('text');
+        let combined = $('#txt').val() + ' ' + pasted;
+        let words = getWords(combined).slice(0, MAX_WORDS);
+        $('#txt').val(words.join(' '));
+        updateWordCount();
+    }
+
+    function clearChat() {
+        if (!confirm('Clear this conversation?')) return;
+        $.post('/Chat/ClearChat', function () {
+            $('#chatHistory').empty();
+        });
+    }
+    function disableChatInput() {
+        $('#txt').val('').prop('disabled', true);
+        $('button[onclick="send()"]').prop('disabled', true);
+        $('button[onclick="clearQuestion()"]').prop('disabled', true);
+    }
+
+    function enableChatInput() {
+        $('#txt').prop('disabled', false);
+        $('button[onclick="send()"]').prop('disabled', false);
+        $('button[onclick="clearQuestion()"]').prop('disabled', false);
+        $('#txt').focus();
+    }
+
+</script>

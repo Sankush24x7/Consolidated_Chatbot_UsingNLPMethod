@@ -1,0 +1,24 @@
+﻿@model System.Data.DataTable
+
+<h2>🛡 Chat Sessions (Admin)</h2>
+
+<table border="1" width="100%">
+    <tr>
+        <th>User</th>
+        <th>UserId</th>
+        <th>Login Time</th>
+        <th>Action</th>
+    </tr>
+
+    @foreach (System.Data.DataRow r in Model.Rows)
+    {
+        <tr>
+            <td>@r["UserName"]</td>
+            <td>@r["UserId"]</td>
+            <td>@Convert.ToDateTime(r["LoginTime"]).ToString("dd MMM yyyy hh:mm tt")</td>
+            <td>
+                <a href="/Admin/ViewChat?sessionId=@r["SessionId"]">View Chat</a>
+            </td>
+        </tr>
+    }
+</table>

@@ -1,0 +1,13 @@
+﻿@model System.Data.DataTable
+
+<h2>📜 Session Chat</h2>
+
+@foreach (System.Data.DataRow r in Model.Rows)
+{
+    <div style="margin-bottom:6px;">
+        <b>@r["Sender"]:</b> @r["Message"]
+        <span style="font-size:10px;color:gray;">
+            (@Convert.ToDateTime(r["CreatedOn"]).ToString("hh:mm tt"))
+        </span>
+    </div>
+}

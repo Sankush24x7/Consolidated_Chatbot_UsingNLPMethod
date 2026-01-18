@@ -1,0 +1,20 @@
+﻿@model System.Data.DataTable
+
+<h2>Pending Questions</h2>
+
+<table border="1">
+    @foreach (System.Data.DataRow r in Model.Rows)
+    {
+        <tr>
+            <td>@r["Question"]</td>
+            <td>@r["Frequency"]</td>
+            <td>
+                <form method="post" action="/Admin/Approve">
+                    <input type="hidden" name="id" value="@r["Id"]" />
+                    <input name="answer" placeholder="Correct answer" />
+                    <button>Approve</button>
+                </form>
+            </td>
+        </tr>
+    }
+</table>

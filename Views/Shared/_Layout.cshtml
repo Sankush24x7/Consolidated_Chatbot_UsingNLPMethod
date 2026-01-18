@@ -1,0 +1,112 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>@ViewBag.Title</title>
+
+    <style>
+        .menu {
+            background: #2c3e50;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .menu-left button {
+            margin-right: 10px;
+            padding: 8px 14px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .chat {
+            background: #1abc9c;
+        }
+
+        .admin {
+            background: #f39c12;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: white;
+            font-size: 13px;
+        }
+
+        .avatar {
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            background: #1abc9c;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 🔝 MENU BAR -->
+    <div class="menu">
+
+        <div class="menu-left">
+            @if (Session["USER_ID"] != null)
+            {
+                <button class="chat" onclick="location.href='/Chat/Index'">💬 Chat Mode</button>
+                <button class="admin" onclick="location.href='/Home/AdminMode'">🛡 Admin Mode</button>
+            }
+            else
+            {
+                <button onclick="location.href='/Auth/Login'">Login</button>
+                <button onclick="location.href='/Auth/Signup'">Sign Up</button>
+            }
+        </div>
+
+        @if (Session["USER_ID"] != null)
+        {
+            string username = Session["USERNAME"].ToString();
+            string role = Session["ROLE"].ToString();
+            string avatar = username.Substring(0, 1).ToUpper();
+
+            <div class="user-info">
+                <div class="avatar">@avatar</div>
+                <div>
+                    <div>@username</div>
+                    <div style="font-size:12px;color:#ddd">@role</div>
+                </div>
+                <button class="admin" onclick="location.href='/Auth/Logout'">Logout</button>
+            </div>
+        }
+
+    </div>
+
+    <!-- 🔽 PAGE CONTENT -->
+    <div style="padding:15px">
+        @RenderBody()
+    </div>
+
+    <!-- 🔔 Session timeout warning -->
+    <script>
+        var sessionTimeoutMinutes = 20;
+        var warningMinutes = 2;
+
+        setTimeout(function () {
+            alert("⚠️ Your session will expire in 2 minutes.");
+        }, (sessionTimeoutMinutes - warningMinutes) * 60 * 1000);
+    </script>
+
+    <!-- 🔄 Keep-alive -->
+    <script>
+        setInterval(function () {
+            fetch('/Chat/Index', { method: 'HEAD' });
+        }, 5 * 60 * 1000);
+    </script>
+
+</body>
+</html>

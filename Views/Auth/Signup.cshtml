@@ -1,0 +1,191 @@
+﻿@{
+    if (Session["USER_ID"] != null)
+    {
+        ViewBag.Title = "Sign Up";
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+}
+
+
+<style>
+    .signup-container {
+        width: 420px;
+        margin: 70px auto;
+        padding: 25px;
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+        .signup-container h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .signup-container input {
+            width: 95%;
+            padding: 10px;
+            margin-bottom: 12px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            font-size: 14px;
+        }
+
+        .signup-container button {
+            width: 100%;
+            padding: 10px;
+            background: #3498db;
+            border: none;
+            color: #fff;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+            .signup-container button:hover {
+                background: #2c80b4;
+            }
+
+    .signup-footer {
+        text-align: center;
+        margin-top: 15px;
+        font-size: 13px;
+    }
+
+        .signup-footer a {
+            color: #2980b9;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+            .signup-footer a:hover {
+                text-decoration: underline;
+            }
+
+    .error-msg {
+        background: #fdecea;
+        color: #b71c1c;
+        padding: 8px;
+        margin-top: 12px;
+        border-radius: 4px;
+        text-align: center;
+        font-size: 13px;
+    }
+</style>
+
+<div class="signup-container">
+    <h2>📝 Create Account</h2>
+
+    <form method="post">
+        <input name="username"
+               placeholder="User Name"
+               autocomplete="off"
+               required />
+        @*<div id="userCheck"></div>*@
+
+        <input type="date"
+               name="dob"
+               required />
+        @*<div id="ageError" class="error-msg" style="display:none;">
+                You must be at least 18 years old.
+            </div>*@
+
+        <input type="password"
+               name="password"
+               placeholder="Password"
+               required />
+        <!-- Show / Hide -->
+        @*<label style="font-size:12px;">
+                <input type="checkbox" onclick="togglePassword()"> Show Password
+            </label>*@
+        <!-- Strength -->
+        <div id="strengthMsg" class="strength"></div>
+
+        <input type="password"
+               name="confirmPassword"
+               placeholder="Confirm Password"
+               required />
+
+        <button type="submit">Sign Up</button>
+    </form>
+    @*@if (ViewBag.Error != null)
+        {
+            <div class="error-msg">@ViewBag.Error</div>
+        }*@
+
+    <div class="signup-footer">
+        Already have an account?
+        <a href="/Auth/Login">Login</a>
+    </div>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="error-msg">
+            @ViewBag.Error
+        </div>
+    }
+</div>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+    /* 🔐 PASSWORD STRENGTH */
+    function checkStrength() {
+        let pwd = $('#password').val();
+        let msg = $('#strengthMsg');
+
+        if (pwd.length < 6) {
+            msg.text('Weak password').attr('class', 'strength weak');
+        }
+        else if (pwd.match(/[A-Z]/) && pwd.match(/[0-9]/)) {
+            msg.text('Strong password').attr('class', 'strength strong');
+        }
+        else {
+            msg.text('Medium strength').attr('class', 'strength medium');
+        }
+    }
+
+    /* 👁️ SHOW / HIDE PASSWORD */
+    function togglePassword() {
+        let p = document.getElementById("password");
+        p.type = (p.type === "password") ? "text" : "password";
+    }
+
+    /* 🎂 AGE VALIDATION (>= 18) */
+    function validateAge() {
+        let dob = document.getElementById('dob').value;
+        if (!dob) return false;
+
+        let birth = new Date(dob);
+        let today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        let m = today.getMonth() - birth.getMonth();
+
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+            $('#ageError').show();
+            return false;
+        }
+
+        $('#ageError').hide();
+        return true;
+    }
+
+    /* 🔍 USERNAME AVAILABILITY (AJAX) */
+    function checkUsername() {
+        let u = $('#username').val();
+        if (!u) return;
+
+        $.get('/Auth/CheckUsername', { username: u }, function (res) {
+            if (res.exists) {
+                $('#userCheck').html('<span class="error-msg">Username already taken</span>');
+            } else {
+                $('#userCheck').html('<span class="ok-msg">Username available</span>');
+            }
+        });
+    }
+</script>

@@ -1,0 +1,28 @@
+﻿<h2>Chatbot Analytics</h2>
+
+<canvas id="topQ"></canvas>
+<p id="failures"></p>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+$(function () {
+    $.getJSON('/Admin/TopQuestions', function (data) {
+        const labels = data.map(x => x.Question);
+        const values = data.map(x => x.Count);
+
+        new Chart(document.getElementById('topQ'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{ data: values }]
+            }
+        });
+    });
+
+    $.getJSON('/Admin/FailureStats', function (d) {
+        $('#failures').text("Unanswered Questions: " + d[0].Failures);
+    });
+});
+</script>
